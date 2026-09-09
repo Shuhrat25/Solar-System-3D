@@ -288,11 +288,15 @@ export default function CameraRig() {
 
   function runTravel(dt, store) {
     const body = getBody(store.target)
-    const planetPos = bodyPositions.get(store.target)
-    if (!body || !planetPos) {
+    if (!body) {
       store.release()
       return
     }
+    // В самом первом кадре планеты ещё не сообщили свои позиции (они
+    // считаются позже по приоритету useFrame) — просто ждём следующий кадр,
+    // а не отменяем перелёт.
+    const planetPos = bodyPositions.get(store.target)
+    if (!planetPos) return
 
     state.travelT = Math.min(1, state.travelT + dt / state.travelDuration)
     const t = easeInOut(state.travelT)
@@ -334,11 +338,12 @@ export default function CameraRig() {
 
   function runOrbit(dt, store) {
     const body = getBody(store.target)
-    const planetPos = bodyPositions.get(store.target)
-    if (!body || !planetPos) {
+    if (!body) {
       store.release()
       return
     }
+    const planetPos = bodyPositions.get(store.target)
+    if (!planetPos) return
 
     const { dx, dy, wheel } = consumePointerDelta()
     if (input.dragging) {
