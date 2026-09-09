@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { getTexture } from './textures'
 import { flight } from '../store'
+import { quality } from '../quality'
 
 /** Спектральные классы звёзд — от голубых гигантов до красных карликов. */
 const STAR_COLORS = [
@@ -26,7 +27,7 @@ function mulberry(seed) {
 }
 
 /** Дальние звёзды: сфера-оболочка плюс уплотнение вдоль «Млечного Пути». */
-function Stars({ count = 9000 }) {
+function Stars({ count = quality.stars }) {
   const group = useRef()
 
   const geometry = useMemo(() => {
@@ -119,7 +120,7 @@ function Nebulae() {
   const group = useRef()
   const clouds = useMemo(() => {
     const rnd = mulberry(777)
-    return Array.from({ length: 7 }, (_, i) => {
+    return Array.from({ length: quality.nebulae }, (_, i) => {
       const theta = rnd() * Math.PI * 2
       const y = (rnd() - 0.5) * 900
       const radius = 1500 + rnd() * 900
@@ -160,7 +161,7 @@ function Nebulae() {
  * Близкая пыль вокруг камеры. Частицы «заворачиваются» в кубе вокруг
  * наблюдателя — благодаря параллаксу появляется ощущение скорости.
  */
-function SpaceDust({ count = 500, range = 45 }) {
+function SpaceDust({ count = quality.dust, range = 45 }) {
   const ref = useRef()
 
   const geometry = useMemo(() => {

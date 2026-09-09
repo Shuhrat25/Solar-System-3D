@@ -6,6 +6,7 @@
  * Так проект остаётся автономным и одинаково выглядит без интернета.
  */
 import * as THREE from 'three'
+import { quality } from '../quality'
 
 const cache = new Map()
 
@@ -190,7 +191,8 @@ function drawCraters(ctx, w, h, count, rnd) {
     const v = rnd()
     const cy = v * h
     const shrink = 0.35 + Math.cos((v - 0.5) * Math.PI) * 0.65
-    const r = (3 + rnd() * 20) * shrink * (w / 512)
+    const t = rnd()
+    const r = (2 + t * t * 16) * shrink * (w / 512)
     const cx = rnd() * w
     for (const ox of [-w, 0, w]) {
       const g = ctx.createRadialGradient(cx + ox, cy, r * 0.05, cx + ox, cy, r)
@@ -250,13 +252,14 @@ function makeBanded(cfg) {
   const n2 = makeNoise3D(seed + 7703)
 
   const maps = renderSphereMaps(width, height, 2.6, (u, v, x, y, z) => {
-    // Сильно вытянутый по долготе шум даёт характерные зональные завихрения.
-    const swirl = fbm(n1, x * 0.35, y * 3.4, z * 0.35, 5) - 0.5
-    const fine = fbm(n2, x * 1.4, y * 6.0, z * 1.4, 4) - 0.5
-    const coord = v * bands + swirl * bandAmp + fine * (bandAmp * 0.35)
+    // Шум сильно сжат по широте и растянут по долготе — получаются
+    // зональные завихрения, а не мраморные разводы.
+    const swirl = fbm(n1, x * 0.22, y * 5.2, z * 0.22, 5) - 0.5
+    const fine = fbm(n2, x * 0.9, y * 11.0, z * 0.9, 4) - 0.5
+    const coord = v * bands + swirl * bandAmp + fine * (bandAmp * 0.3)
     let t = 0.5 + 0.5 * Math.sin(coord * Math.PI * 2)
     t = 0.5 + (t - 0.5) * contrast
-    const shade = 0.94 + fine * 0.16
+    const shade = 0.93 + fine * 0.2
     let c = ramp(palette, clamp01(t))
     c = [c[0] * shade, c[1] * shade, c[2] * shade]
 
@@ -467,9 +470,12 @@ const hashSeed = (str) => {
   return h >>> 0
 }
 
+/** Сторона текстуры с учётом профиля качества (всегда чётная). */
+const texSize = (base) => Math.max(128, Math.round((base * quality.textureScale) / 2) * 2)
+
 function buildPlanet(body) {
   const big = body.radius >= 2.4 || body.id === 'earth'
-  const width = big ? 1024 : 512
+  const width = texSize(big ? 1024 : 512)
   const height = width / 2
   const seed = hashSeed(body.id)
 
@@ -558,15 +564,23 @@ function buildShared() {
   })
 }
 
+let running = null
+let progressCb = null
+
 /**
- * Генерирует все текстуры, отдавая управление браузеру между телами,
- * чтобы полоса загрузки успевала анимироваться.
+ * Генерирует все текстуры один раз за сессию, отдавая управление браузеру
+ * между телами, чтобы полоса загрузки успевала анимироваться.
+ *
+ * Повторные вызовы (например, из-за React StrictMode) подписываются на уже
+ * идущую генерацию, а не запускают вторую.
  */
-export async function generateAllTextures(bodies, onProgress) {
-  if (cache.size > 0) {
-    onProgress?.(1, '')
-    return
-  }
+export function generateAllTextures(bodies, onProgress) {
+  progressCb = onProgress ?? null
+  if (!running) running = runGeneration(bodies, (p, label) => progressCb?.(p, label))
+  return running
+}
+
+async function runGeneration(bodies, onProgress) {
   const yieldToBrowser = () => new Promise((r) => setTimeout(r, 0))
   const total = bodies.length + 1
 
@@ -582,9 +596,10 @@ export async function generateAllTextures(bodies, onProgress) {
         const seed = hashSeed(body.id + moon.name)
         const c = new THREE.Color(moon.color)
         const base = [c.r * 255, c.g * 255, c.b * 255]
+        const moonWidth = texSize(256)
         const maps = makeRocky({
-          width: 256,
-          height: 128,
+          width: moonWidth,
+          height: moonWidth / 2,
           seed,
           palette: [
             [0.0, [base[0] * 0.35, base[1] * 0.35, base[2] * 0.35]],

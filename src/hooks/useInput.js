@@ -13,20 +13,30 @@ export const input = {
   brake: false,
   dragging: false,
   dragDistance: 0,
+  /** Отклонение «мышиного стика», −1 … 1. */
+  mouseYaw: 0,
+  mousePitch: 0,
   /** Виртуальный стик (сенсорный экран). */
   stick: { x: 0, y: 0, active: false },
   /** Кнопки тяги на сенсорном экране. */
   touchThrust: 0,
   touchBoost: false,
+  /** Сырое смещение указателя за кадр — нужно для орбитального осмотра. */
+  dragDeltaX: 0,
+  dragDeltaY: 0,
+  /** Прокрутка колеса за кадр — приближение на орбите. */
+  wheelDelta: 0,
 }
 
-export function resetInput() {
-  input.thrust = 0
-  input.yaw = 0
-  input.pitch = 0
-  input.roll = 0
-  input.boost = false
-  input.brake = false
+/** Забирает накопленные дельты указателя и обнуляет их. */
+export function consumePointerDelta() {
+  const dx = input.dragDeltaX
+  const dy = input.dragDeltaY
+  const wheel = input.wheelDelta
+  input.dragDeltaX = 0
+  input.dragDeltaY = 0
+  input.wheelDelta = 0
+  return { dx, dy, wheel }
 }
 
 const KEYS = {
@@ -38,6 +48,8 @@ const KEYS = {
   ArrowLeft: 'left',
   KeyD: 'right',
   ArrowRight: 'right',
+  KeyR: 'pitchUp',
+  KeyF: 'pitchDown',
   KeyQ: 'rollL',
   KeyE: 'rollR',
   ShiftLeft: 'boost',
@@ -82,6 +94,8 @@ export function useInput(canvasRef, { enabled = true } = {}) {
 
     let originX = 0
     let originY = 0
+    let lastX = 0
+    let lastY = 0
     let pointerId = null
     let mouseYaw = 0
     let mousePitch = 0
@@ -94,17 +108,23 @@ export function useInput(canvasRef, { enabled = true } = {}) {
     const onDown = (e) => {
       if (e.button !== undefined && e.button !== 0 && e.button !== 2) return
       pointerId = e.pointerId
-      originX = e.clientX
-      originY = e.clientY
+      originX = lastX = e.clientX
+      originY = lastY = e.clientY
       input.dragging = true
       input.dragDistance = 0
-      el.setPointerCapture?.(e.pointerId)
+      // Никакого setPointerCapture: захват увёл бы событие click на обёртку,
+      // и R3F перестал бы получать клики по планетам. Движение и отпускание
+      // и так слушаются на window.
     }
 
     const onMove = (e) => {
       if (pointerId !== e.pointerId) return
       const dx = e.clientX - originX
       const dy = e.clientY - originY
+      input.dragDeltaX += e.clientX - lastX
+      input.dragDeltaY += e.clientY - lastY
+      lastX = e.clientX
+      lastY = e.clientY
       input.dragDistance = Math.max(input.dragDistance, Math.hypot(dx, dy))
       // Мёртвая зона 12 px, затем плавное нарастание до предела в 220 px.
       const range = 220
@@ -127,22 +147,38 @@ export function useInput(canvasRef, { enabled = true } = {}) {
       mouseYaw = 0
       mousePitch = 0
       apply()
-      el.releasePointerCapture?.(e.pointerId)
+    }
+
+    // Если указатель ушёл за пределы окна, штурвал нужно отпустить.
+    const onLostPointer = () => {
+      pointerId = null
+      input.dragging = false
+      mouseYaw = 0
+      mousePitch = 0
+      apply()
     }
 
     const onContext = (e) => e.preventDefault()
+    const onWheel = (e) => {
+      e.preventDefault()
+      input.wheelDelta += e.deltaY
+    }
 
     el.addEventListener('pointerdown', onDown)
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onUp)
     el.addEventListener('contextmenu', onContext)
+    el.addEventListener('wheel', onWheel, { passive: false })
+    window.addEventListener('blur', onLostPointer)
     return () => {
       el.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
       el.removeEventListener('contextmenu', onContext)
+      el.removeEventListener('wheel', onWheel)
+      window.removeEventListener('blur', onLostPointer)
     }
   }, [canvasRef, enabled])
 }
@@ -150,14 +186,14 @@ export function useInput(canvasRef, { enabled = true } = {}) {
 /** Сводит клавиатуру, мышь и сенсорный стик в один набор осей. */
 export function sampleInput() {
   const keyYaw = (down.has('left') ? 1 : 0) - (down.has('right') ? 1 : 0)
-  const keyPitch = 0
+  const keyPitch = (down.has('pitchUp') ? 1 : 0) - (down.has('pitchDown') ? 1 : 0)
   const thrustKey = (down.has('up') ? 1 : 0) - (down.has('down') ? 1 : 0)
 
   const stickX = input.stick.active ? input.stick.x : 0
   const stickY = input.stick.active ? input.stick.y : 0
 
-  input.yaw = clamp(keyYaw + (input.mouseYaw || 0) - stickX, -1, 1)
-  input.pitch = clamp(keyPitch + (input.mousePitch || 0) - stickY, -1, 1)
+  input.yaw = clamp(keyYaw + input.mouseYaw - stickX, -1, 1)
+  input.pitch = clamp(keyPitch + input.mousePitch - stickY, -1, 1)
   input.roll = (down.has('rollL') ? 1 : 0) - (down.has('rollR') ? 1 : 0)
   input.thrust = clamp(thrustKey + input.touchThrust, -1, 1)
   input.boost = down.has('boost') || input.touchBoost

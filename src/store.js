@@ -23,7 +23,6 @@ export const useStore = create((set, get) => ({
   navOpen: true,
   progress: 0,
   progressLabel: '',
-  arrived: false,
 
   setProgress: (progress, progressLabel) => set({ progress, progressLabel }),
   setPhase: (phase) => set({ phase }),
@@ -32,17 +31,23 @@ export const useStore = create((set, get) => ({
   /** Начать автопилотный перелёт к телу. */
   travelTo: (id) => {
     if (!id) return
-    set({ mode: 'travel', target: id, selected: null, arrived: false })
+    const { mode, target } = get()
+    // Если уже кружим вокруг этой планеты — просто возвращаем карточку.
+    if (mode === 'orbit' && target === id) {
+      set({ selected: id })
+      return
+    }
+    set({ mode: 'travel', target: id, selected: null })
   },
 
   /** Автопилот прибыл — открываем карточку и переходим на орбиту. */
   arrive: () => {
     const { target } = get()
-    set({ mode: 'orbit', selected: target, arrived: true })
+    set({ mode: 'orbit', selected: target })
   },
 
   /** Вернуться к свободному полёту. */
-  release: () => set({ mode: 'free', selected: null, target: null, arrived: false }),
+  release: () => set({ mode: 'free', selected: null, target: null }),
 
   closePanel: () => set({ selected: null }),
   openPanel: (id) => set({ selected: id }),
@@ -72,3 +77,8 @@ export const flight = {
 
 /** Единица масштаба: 50 единиц сцены = 1 а.е. (орбита Земли). */
 export const UNITS_PER_AU = 50
+
+// Удобный доступ к состоянию полёта из консоли браузера при разработке.
+if (import.meta.env?.DEV && typeof window !== 'undefined') {
+  window.__space = { flight, bodyPositions, useStore }
+}

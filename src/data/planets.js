@@ -16,6 +16,7 @@ export const SUN = {
   rotationPeriod: 90,
   color: '#ffb037',
   accent: '#ff7a18',
+  au: 'центр',
   short:
     'Центр системы: 99,86 % всей её массы. Термоядерный синтез в ядре превращает водород в гелий и даёт свет, которым живут все планеты.',
   facts: {
@@ -95,8 +96,8 @@ export const PLANETS = [
       [0.78, [246, 219, 165]],
       [1.0, [255, 242, 210]],
     ],
-    bands: 7,
-    bandAmp: 2.6,
+    bands: 9,
+    bandAmp: 0.7,
     atmosphere: '#ffd9a0',
     au: '0,72 а.е.',
     short:
@@ -176,7 +177,7 @@ export const PLANETS = [
       [1.0, [246, 190, 150]],
     ],
     craters: 120,
-    polarCaps: 0.4,
+    polarCaps: 0.86,
     au: '1,52 а.е.',
     moons: [
       { name: 'Фобос', radius: 0.17, distance: 2.3, speed: 1.1, color: '#9a8d80', tilt: 0.06 },
@@ -222,8 +223,8 @@ export const PLANETS = [
       [0.78, [198, 146, 96]],
       [1.0, [246, 232, 210]],
     ],
-    bands: 13,
-    bandAmp: 3.2,
+    bands: 17,
+    bandAmp: 0.5,
     storm: { u: 0.62, v: 0.63, rx: 0.075, ry: 0.038, color: [198, 92, 60] },
     au: '5,2 а.е.',
     moons: [
@@ -272,8 +273,8 @@ export const PLANETS = [
       [0.85, [214, 186, 132]],
       [1.0, [250, 240, 214]],
     ],
-    bands: 9,
-    bandAmp: 2.2,
+    bands: 14,
+    bandAmp: 0.38,
     ring: { inner: 1.35, outer: 2.5, tone: [226, 206, 172] },
     au: '9,54 а.е.',
     moons: [
@@ -319,8 +320,8 @@ export const PLANETS = [
       [0.7, [176, 224, 230]],
       [1.0, [214, 244, 246]],
     ],
-    bands: 5,
-    bandAmp: 1.1,
+    bands: 7,
+    bandAmp: 0.24,
     ring: { inner: 1.5, outer: 1.95, tone: [150, 190, 200] },
     au: '19,2 а.е.',
     moons: [
@@ -367,8 +368,8 @@ export const PLANETS = [
       [0.85, [124, 166, 236]],
       [1.0, [196, 220, 250]],
     ],
-    bands: 6,
-    bandAmp: 1.6,
+    bands: 9,
+    bandAmp: 0.32,
     storm: { u: 0.34, v: 0.4, rx: 0.06, ry: 0.032, color: [16, 32, 86] },
     au: '30,1 а.е.',
     moons: [
@@ -415,7 +416,7 @@ export const PLANETS = [
       [1.0, [240, 232, 218]],
     ],
     craters: 90,
-    polarCaps: 0.36,
+    polarCaps: 0.8,
     au: '39,5 а.е.',
     moons: [
       { name: 'Харон', radius: 0.3, distance: 1.9, speed: 0.5, color: '#a9a29a', tilt: 0.2 },

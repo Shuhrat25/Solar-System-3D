@@ -80,7 +80,6 @@ const fragmentShader = /* glsl */ `
 `
 
 export default function Sun() {
-  const matRef = useRef()
   const coronaRef = useRef()
   const flareRef = useRef()
   const meshRef = useRef()
@@ -123,13 +122,12 @@ export default function Sun() {
         onPointerOut={() => setHovered(null)}
         onClick={(e) => {
           e.stopPropagation()
-          if (input.dragDistance > 8) return
+          if (input.dragDistance > 14) return
           travelTo('sun')
         }}
       >
         <sphereGeometry args={[SUN.radius, 96, 64]} />
         <shaderMaterial
-          ref={matRef}
           uniforms={uniforms}
           vertexShader={vertexShader}
           fragmentShader={fragmentShader}

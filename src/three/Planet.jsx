@@ -6,6 +6,10 @@ import { getTexture } from './textures'
 import { orbitSpeed } from '../data/planets'
 import { useStore, bodyPositions } from '../store'
 import { input } from '../hooks/useInput'
+import { quality } from '../quality'
+
+/** Допуск смещения, при котором нажатие ещё считается тапом, а не штурвалом. */
+const TAP_SLOP = 14
 
 const DEG = Math.PI / 180
 
@@ -42,7 +46,7 @@ const atmoFragment = /* glsl */ `
   }
 `
 
-function Atmosphere({ radius, color, power = 2.6, strength = 1.35 }) {
+function Atmosphere({ radius, color, power = 3.4, strength = 0.85 }) {
   const uniforms = useMemo(
     () => ({
       uColor: { value: new THREE.Color(color) },
@@ -52,7 +56,7 @@ function Atmosphere({ radius, color, power = 2.6, strength = 1.35 }) {
     [color, power, strength]
   )
   return (
-    <mesh scale={radius * 1.13}>
+    <mesh scale={radius * 1.09}>
       <sphereGeometry args={[1, 48, 32]} />
       <shaderMaterial
         uniforms={uniforms}
@@ -122,7 +126,7 @@ function Moon({ planetId, moon, index }) {
     <group rotation={[moon.tilt ?? 0, 0, 0]}>
       <group ref={pivot}>
         <mesh position={[moon.distance, 0, 0]} castShadow receiveShadow>
-          <sphereGeometry args={[moon.radius, 24, 16]} />
+          <sphereGeometry args={[moon.radius, quality.moonSegments[0], quality.moonSegments[1]]} />
           <meshStandardMaterial
             map={map}
             bumpMap={bump}
@@ -168,7 +172,7 @@ export default function Planet({ body, index }) {
   const spin = useMemo(() => (Math.PI * 2) / body.rotationPeriod, [body.rotationPeriod])
   const worldPos = useMemo(() => new THREE.Vector3(), [])
 
-  const segments = body.radius > 2.4 ? [64, 48] : [48, 32]
+  const segments = body.radius > 2.4 ? quality.bigPlanetSegments : quality.planetSegments
   const map = getTexture(`${body.id}:map`)
   const bump = getTexture(`${body.id}:bump`)
   const cloudMap = body.clouds ? getTexture(`${body.id}:clouds`) : null
@@ -209,7 +213,7 @@ export default function Planet({ body, index }) {
 
   const handleClick = (e) => {
     e.stopPropagation()
-    if (input.dragDistance > 8) return
+    if (input.dragDistance > TAP_SLOP) return
     travelTo(body.id)
   }
 
@@ -281,7 +285,7 @@ export default function Planet({ body, index }) {
           <Html
             center
             position={[0, body.radius * 1.9 + 0.6, 0]}
-            zIndexRange={[20, 0]}
+            zIndexRange={[8, 0]}
             style={{ pointerEvents: 'none', transition: 'opacity .25s' }}
           >
             <div className="planet-label" ref={labelRef}>
